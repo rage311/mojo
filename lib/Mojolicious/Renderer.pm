@@ -2,12 +2,14 @@ package Mojolicious::Renderer;
 use Mojo::Base -base;
 
 use Mojo::Cache;
+use Mojo::DynamicMethods;
 use Mojo::File 'path';
 use Mojo::JSON 'encode_json';
 use Mojo::Home;
 use Mojo::Loader 'data_section';
 use Mojo::Util qw(decamelize encode gzip md5_sum monkey_patch);
 
+has app     => undef, weak => 1;
 has cache   => sub { Mojo::Cache->new };
 has classes => sub { ['main'] };
 has [qw(compress default_handler)];
@@ -41,8 +43,14 @@ sub add_handler { $_[0]->handlers->{$_[1]} = $_[2] and return $_[0] }
 
 sub add_helper {
   my ($self, $name, $cb) = @_;
+
   $self->helpers->{$name} = $cb;
+  $cb = $self->get_helper($name) if $name =~ s/\..*$//;
+  my $app = $self->app;
+  Mojo::DynamicMethods::register 'Mojolicious',             $app, $name, $cb;
+  Mojo::DynamicMethods::register 'Mojolicious::Controller', $app, $name, $cb;
   delete $self->{proxy};
+
   return $self;
 }
 

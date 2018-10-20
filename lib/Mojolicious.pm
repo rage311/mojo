@@ -41,7 +41,7 @@ has 'max_request_size';
 has mode     => sub { $ENV{MOJO_MODE} || $ENV{PLACK_ENV} || 'development' };
 has moniker  => sub { Mojo::Util::decamelize ref shift };
 has plugins  => sub { Mojolicious::Plugins->new };
-has renderer => sub { Mojolicious::Renderer->new };
+has renderer => sub { Mojolicious::Renderer->new(app => shift) };
 has routes   => sub { Mojolicious::Routes->new };
 has secrets  => sub {
   my $self = shift;
@@ -150,18 +150,7 @@ sub handler {
     unless $c->stash->{'mojo.rendered'};
 }
 
-sub helper {
-  my ($self, $name, $helper) = @_;
-
-  my $ret = $self->renderer->add_helper($name => $helper);
-  $helper = $self->renderer->get_helper($name) if $name =~ s/\..*$//;
-
-  Mojo::DynamicMethods::register 'Mojolicious', $self, $name, $helper;
-  Mojo::DynamicMethods::register 'Mojolicious::Controller', $self, $name,
-    $helper;
-
-  return $ret;
-}
+sub helper { shift->renderer->add_helper(@_) }
 
 sub hook { shift->plugins->on(@_) }
 
